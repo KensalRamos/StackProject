@@ -51,6 +51,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 // Stack structure
 struct stack {
@@ -66,13 +67,14 @@ int isOperator(char c);
 int getOperatorProperty(char c);
 int convertToInt(char c);
 int calculate(int a, int b, char op);
+void evaluate(char *);
 // Stack operations
 void push(struct stack *, char);
 char pop(struct stack *);
 void setTop(struct stack *);
 void fill(struct stack *, char *);
 char * convertToPostFix(struct stack *, char *);
-int testPriority(char , char);
+int testPriority(char);
 
 
 
@@ -85,16 +87,16 @@ int main(void) {
 
     while (strcmp(str = menu(), "exit") != 0) {
 
-/*        if (isBalancedParenthesis(str)) {
-            postFix = convertToPostFix(str);
+       if (isBalancedParenthesis(str)) {
+            setTop(&stack);
+            fill(&stack, str);
+            convertToPostFix(&stack, postFix);
+            printf("Converted to postFix.");
             evaluate(postFix);
         }
         else
             printf("Parenthesis imbalanced");
-*/
-        setTop(&stack);
-        fill(&stack, str);
-        convertToPostFix(&stack, postFix);
+            
 
         printf("\nPostfix is: ");
         for (int i = 0; postFix[i] != '\0'; i++) {
@@ -289,60 +291,63 @@ char * convertToPostFix(struct stack *stack, char *postFix) {
     setTop(&tempStack);
     for (int i = 0; i < stack->top + 1; i++) {
 
-        if (i > stack->top) {
-            printf("\nReached end of stack.");
-
-//REMOVE
-
-            j = 0;
-            break;
-            
-        }
-        else if (isOperator(stack->items[i])) {
+        printf("\n\nTop is: %d", tempStack.top);
+        if (isOperator(stack->items[i])) {
             // If it is an open parentheses -> push it
-            if ((int)stack->items[i] == 40)
+            if ((int)stack->items[i] == 40) {
+                printf("\nOpen parentheses detected. Pushing...");
                 push(&tempStack, stack->items[i]);
+            }
 
             // If it is a closed parentheses -> pop until open parentheses is found.
             else if ((int)stack->items[i] == 41) {
-                do {
+                printf("\nClosed parentheses detected. Pushing...");
+                while ((int)tempStack.items[tempStack.top] != 40) {
+                    j = 0;
                     // Get next empty space
                     while(postFix[j] != '\0')
                         j++;
                     postFix[j] = pop(&tempStack);
-                } while ((int)postFix[i] != 40);
-
+                } 
                 j = 0;
             }
             // If the operator inside the temp array has greater priority -> push
             // Should also be the case if it is a number
-            else if (testPriority(stack->items[i], tempStack.items[i])) {
-                printf("\nItem in stack has higher priority than operator in tempStack. Pushed.");
+            else if (testPriority(stack->items[i]) > testPriority(tempStack.items[tempStack.top])) {
+                
+                printf("\nItem in stack has greater priority than operator in tempStack. Pushed.");
+                printf("\nTop is %d", tempStack.top);
                 push(&tempStack, stack->items[i]);
+                printf("\nTop is %d", tempStack.top);
+                printf("\ntempStack now has %c at %d -> %c", tempStack.items[i], i, stack->items[i]);
 
             }
             // If the operator inside the postFix has same or lesses priority -> pop until empty or top case found
             else {
+                j = 0;
 
-                
-                do {
-                    if (tempStack.top == -1) {
-                        printf("\ntempStack is empty. Pushing operator");
-                        push(&tempStack, stack->items[i]);
-                        printf("\ntempStack now has: %c at %d", tempStack.items[0], i);
-                    }
-                    else {
-                        printf("\nItem in stack has lesser priority than operator in tempStack. Popping until otherwise.");
+                if (tempStack.top == -1) {
+                    printf("\nEmpty stack. Pushing...");
+                    push(&tempStack, stack->items[i]);
+                }
+                else {
+                    printf("\nItem in stack has lesser priority than operator in tempStack. Popping until otherwise."); 
+
+                    do {
                         // Get next empty space
-                        while(postFix[j] != '\0')
+                        while(postFix[j] != '\0') {
                             j++;
+                        }
                         postFix[j] = pop(&tempStack);
-                    }
-                    //printf("\nPostfix is: %c, i = %d", postFix[i], i);
-                } while(testPriority(tempStack.items[i], postFix[i]));
+                        printf("POSTFIX IS %c AT %d", postFix[j], j);
+                        j = 0;
+                    } while (testPriority(stack->items[i]) > testPriority(tempStack.items[i]) && tempStack.top != -1);
+
+                    push(&tempStack, stack->items[i]);
+
+                }
                 j = 0;
             }
-            
         }
         else {
             printf("\nItem %d, %c, in stack is a number. Appending to postFix.", i, stack->items[i]);
@@ -352,84 +357,114 @@ char * convertToPostFix(struct stack *stack, char *postFix) {
                 j++;
 
             postFix[j] = stack->items[i];
-            //printf("\nPostfix is: %c, i = %d", postFix[j], i);
             j = 0;
         }
 
     }
+    j = 0;
 
-    // Get next empty space
-    while(postFix[j] != '\0') {
-        j++;
-        printf("\nJ is %d",j);
+    // We want to empty tempStack and put it into postFix. No overrites!
+
+    printf("\n\ntempStack.top is %d", tempStack.top);
+    while (tempStack.top != -1) {
+        while (postFix[j] != '\0') 
+            j++;
+
+        if(tempStack.items[tempStack.top] != '(' || tempStack.items[tempStack.top] != '(')
+            postFix[j] = pop(&tempStack);
+        else
+            pop(&tempStack);
+             
+        printf("\npostFix now has: %c at %d", postFix[j], j);
+        j = 0;
     }
-    printf("\nPostfix[0] = %c", postFix[0]);
-    printf("\nPostfix[1] = %c", postFix[1]);
-
-            
-    if (tempStack.top != -1) {
-        while(k <= tempStack.top) {
-            postFix[j + k] = tempStack.items[k];
-            tempStack.top--;
-            k++;
-        }
-        printf("\nTop of tempStack is: %d", tempStack.top);
-        tempStack.top--;
-    }
-
-    printf("\nPostfix[2] = %c", postFix[2]);
 
     return postFix;
 
 }
 
-// Char a will be the one inside the infix
-// Char b will be the one in the postFix 
+// Char a will be the one inside tempStack.items
+// Char b will be the one inside stack->items
 // True if b has higher priority
-int testPriority(char a, char b) {
+int testPriority(char a) {
 
-    int numA, numB;
 
     switch(a) {
         case '^':
-            numA = 3;
+            return 3;
             break;
         case '*':
         case '/':
         case '%':
-            numA = 2;
+            return 2;
             break;
         case '+':
         case '-':
-            numA = 1;
+            return 1;
             break;
         default:
-            numA = 0;
+            return 0;
     }
-
-    switch(b) {
-        case '^':
-            numB = 3;
-            break;
-        case '*':
-        case '/':
-        case '%':
-            numB = 2;
-            break;
-        case '+':
-        case '-':
-            numB = 1;
-            break;
-        default:
-            numB = 0;
-    }
-
-    if (numB >= numA) {
-        return 1;
-        printf("\nTrue!");
-        }
-    else
-        return 0;
         
+
+}
+
+int convertToInt(char c) {
+
+    return (c - '0');
+}
+
+int calculate(int a, int b, char op) {
+
+    switch(op) {
+        case '*':
+            return (a * b);
+        case '/':
+            return (a / b);
+        case '^':
+            return (pow(a, b));
+        case '%':
+            return (a % b);
+        case '+':
+            printf("\nAdding a and b");
+            return (a + b);
+        case '-':
+            return (a - b);
+        
+    }
+
+}
+
+void evaluate(char *postFix) {
+
+    struct stack temp;
+    int i = 0, max = 0;
+    char a, b;
+
+    setTop(&temp);
+
+    // Get the length of postFix
+    while (postFix[max] != '\0')
+        max++;
+
+    for (i = 0; i < max; i++) {
+
+        // If its a number... else
+        if(!isOperator(postFix[i])) {
+            printf("\nEncountered %c at %d", postFix[i], i);
+            push(&temp, postFix[i]);
+        }
+        else {
+            a = pop(&temp);
+            printf("\na is: %c", a);
+            b = pop(&temp);
+            printf("\nb is: %c", b);
+            printf("\nconvertToInt(a) = %d", convertToInt(a));
+            printf("\nOperator is: %c", postFix[i]);
+            push(&temp, calculate(convertToInt(a), convertToInt(b), postFix[i]));
+        }
+    }
+
+    printf("\n\nResult is: %d", temp.items[temp.top]);
 
 }
